@@ -1,3 +1,9 @@
+init-system-helpers (1.22pexip1) pexip; urgency=low
+
+  * Prepare Pexip packaging
+
+ -- John-Mark Bell <jmb@pexip.com>  Wed, 22 Mar 2017 19:46:34 +0000
+
 init-system-helpers (1.22) unstable; urgency=medium
 
   * Depend on perl-base instead of perl (Closes: #757891)
