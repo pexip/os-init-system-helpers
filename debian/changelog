@@ -1,3 +1,9 @@
+init-system-helpers (1.48pexip1) pexip; urgency=medium
+
+  * Migrate to Stretch
+
+ -- John-Mark Bell <jmb@pexip.com>  Tue, 10 Jul 2018 11:01:39 +0000
+
 init-system-helpers (1.48) unstable; urgency=medium
 
   * Team upload
