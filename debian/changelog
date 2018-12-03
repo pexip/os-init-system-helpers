@@ -1,3 +1,179 @@
+init-system-helpers (1.56+nmu1) unstable; urgency=medium
+
+  * Non-maintainer upload.
+  * Add `runit-init' as alternative pre-dependency (Closes: #838480)
+
+ -- Dmitry Bogatov <KAction@debian.org>  Mon, 03 Dec 2018 23:10:03 +0000
+
+init-system-helpers (1.56) unstable; urgency=medium
+
+  * update-rc.d: If systemctl is available, use it in make_systemd_links.
+    To not create an endless loop, we set SYSTEMCTL_SKIP_SYSV=1 which is
+    respected by systemd-sysv-install since v228. Add a versioned Breaks
+    against systemd accordingly.
+  * man: Fix name field of update-rc.d man page
+  * man: Stop mentioning file-rc in invoke-rc.d man page.
+    The file-rc package has been removed from the archive.
+  * man: Stop mentioning bum and sysv-rc-conf in update-rc.d man page
+  * man: Update bugtracker URLs.
+    invoke-rc.d and update-rc.d are provided by init-system-helpers
+    nowadays. Keep a reference to sysv-rc, for the sysvinit related bits.
+
+ -- Michael Biebl <biebl@debian.org>  Thu, 22 Nov 2018 00:15:24 +0100
+
+init-system-helpers (1.55) unstable; urgency=medium
+
+  [ Ondřej Nový ]
+  * d/control: Deprecating priority extra as per policy 4.0.1
+
+  [ Benda Xu ]
+  * s/update-rc.d: let OpenRC run after sysv_{insserv,plain}
+    Refactorization in 6cb72b59a0a1898939b818d8d2 made rc-update from
+    OpenRC run *before* sysv_{insserv,plain}.  OpenRC needs to
+    sychronize with /etc/rc?.d links to maintain consistency and
+    administrator configurations, therefore it has to be executed after
+    them. (Closes: #910444)
+
+  [ Felipe Sateler ]
+  * Fix manpage listings in d/copyright for rst manual pages.
+    The names were not changed correctly when the manpages were rewritten in
+    rst.
+  * Bump Standards-Version (no changes needed)
+
+ -- Felipe Sateler <fsateler@debian.org>  Wed, 24 Oct 2018 08:31:28 -0300
+
+init-system-helpers (1.54) unstable; urgency=medium
+
+  * Revert "Drop fallback for old versions of systemd that didn't have
+    is-enabled"
+    If a package ships both init script and systemd service file, the
+    systemd unit will not be enabled by the time invoke-rc.d is called
+    (with current debhelper sequence). This would make systemctl is-enabled
+    report the wrong status, and then the service would not be started.
+    Add a comment noting this to avoid removing again in the future.
+    This reverts commit 6f95680ffc9b1605841eb7d3d8eb92c790e6c73a.
+    (Closes: #906421, #906051)
+
+ -- Felipe Sateler <fsateler@debian.org>  Fri, 17 Aug 2018 10:33:08 -0300
+
+init-system-helpers (1.53) unstable; urgency=medium
+
+  * tests: only load Linux::Clone if not testing on real system
+    'use' directive is evaluated at compile time, so having it inside an 'if'
+    statement does not have the expected effect. Use the 'use if' directive instead.
+    This fixes running the autopkgtests in clean systems without Linux::Clone module
+
+ -- Felipe Sateler <fsateler@debian.org>  Wed, 15 Aug 2018 23:52:53 -0300
+
+init-system-helpers (1.52) unstable; urgency=medium
+
+  [ Felipe Sateler ]
+  * Change Vcs-* urls to point to the new salsa service
+  * Drop fallback for old versions of systemd that didn't have is-enabled.
+    This reverts commit 0e43de3196a68e59d8a543d1cf7f5b4bfbb27451
+  * invoke-rc.d: add option to do nothing for native systemd units.
+    It is useful to simplify maintainer scripts, since it allows executing
+    this command for sysvinit/openrc
+    systems, and deb-systemd-invoke for systemd systems
+  * Update Standards-Version
+  * deb-systemd-*: Invoke perl interpreter directly in /usr/bin.
+    Do not go through PATH, and avoid possibly using a user-installed
+    interpreter
+  * Bump debhelper compat level to 11
+  * Fix manpage references in d/copyright.
+    They were not updated when the manpages were converted to rst
+  * Replace usage of dpkg-parsechangelog with pkg-info.mk provided by dpkg-dev
+
+  [ Daniele Nicolodi ]
+  * deb-systemd-helper: Fix typo in man page
+  * d/rules: Fix man pages header and footer.
+    Pass options to pod2mn to get correct header and footer content.
+  * deb-systemd-helper: Add comment explaining why 'systemctl preset' is used
+  * tests: Move common setup code and test functions to a new helpers.pm module
+  * tests: Fix setup when TEST_ON_REAL_SYSTEM is not set
+  * tests: Do not require Linux::Clone Perl module if TEST_ON_REAL_SYSTEM is
+    set.
+    If the TEST_ON_REAL_SYSTEM environment variable is set, the bind
+    mounting of empty directories not top of system difrectoried affected
+    by the tests is skipt. Therefore, there is no need to isolate the
+    tests in a mount namespace.
+  * tests: Make sure that the tests do not clutter the host system.
+    In the mount namespace created for the tests, remount the root
+    filesystem read-only. To be able to create temporary files and
+    directories, mount a tmpfs on /tmp.
+  * autopkgtests: Drop seteup steps that are not required anymore
+  * deb-systemd-helper: Implement user instance's service handling
+  * tests: Add tests for user instance's service handling
+  * tests: Make calling 'deb-systemd-helper' in tests less verbose.
+    Removing the shell interposition in the system() calls avoids edge
+    cases in parameters handling (there were places where the randomly
+    generated unit names were not correctly quoted) and speeds up tests
+    execution.
+  * tests: Check that the root filesystemd has been marked private
+
+ -- Felipe Sateler <fsateler@debian.org>  Sun, 12 Aug 2018 10:19:38 -0300
+
+init-system-helpers (1.51) unstable; urgency=high
+
+  [ Michael Biebl ]
+  * Drop obsolete debian/init-system-helpers.postinst
+  * Drop man page translations for update-rc.d.
+    Those are outdated and not installed anyway.
+
+  [ Felipe Sateler ]
+  * Fix errors in pod2man invocations.
+    Catch errors when building pod manpages, and stop trying to build
+    documentation for the debhelper tools
+  * Convert manpages into reStructuredText
+  * update-rc.d: fix typo that was disabling all sysv scripts in defaults mode
+    (Closes: #879771).
+
+ -- Felipe Sateler <fsateler@debian.org>  Wed, 25 Oct 2017 12:38:42 -0300
+
+init-system-helpers (1.50) unstable; urgency=medium
+
+  [ Steve Langasek ]
+  * autopkgtests: Correctly handle unit names that can contain escape sequences.
+    They need to be quoted so that the shell does not parse them.
+    (Closes: #873789)
+
+  [ Felipe Sateler ]
+  * Refactor internals of update-rc.d
+    - Refactor actions into a sequence of steps according to the installed
+      init systems. This makes plugging new init systems or new actions
+      easier.
+  * Add vim modelines for file type
+  * update-rc.d: remove -n (dryrun) option, as it did not work.
+    Given that nobody complained, lets just remove it. (Closes: #856415)
+  * update-rc.d: Add a defaults-disabled action.
+    It allows installing a service but disabled. (Closes: #857452)
+  * Briefly document defaults-disabled
+
+ -- Felipe Sateler <fsateler@debian.org>  Thu, 12 Oct 2017 20:16:13 -0300
+
+init-system-helpers (1.49) unstable; urgency=low
+
+  [ Felipe Sateler ]
+  * Upload to unstable. Urgency low due to large changeset.
+  * d-s-invoke: Execute systemctl once when starting units.
+    This ensures systemd itself can order them the best way it sees fit.
+    (Closes: #848192)
+  * update-rc.d: check that /etc/insserv.conf exists before invoking insserv.
+    It might happen that the binary exists but the configuration file doesn't,
+    and then the insserv invocation will fail. Therefore don't consider insserv
+    installed until the configuration file exists.
+    Thanks to Petter Reinholdtsen for the patch. (Closes: #849284)
+  * Bump Standards-Version
+
+  [ Iain Lane ]
+  * invoke-rc.d: Pass --full to `systemctl status', so we don't get ellipsised
+    output.
+
+  [ Michael Biebl ]
+  * Drop support for upstart
+
+ -- Felipe Sateler <fsateler@debian.org>  Mon, 17 Jul 2017 12:27:32 -0400
+
 init-system-helpers (1.48) unstable; urgency=medium
 
   * Team upload
