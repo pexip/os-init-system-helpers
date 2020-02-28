@@ -1,3 +1,9 @@
+init-system-helpers (1.56+nmu1pexip1) pexip; urgency=medium
+
+  * Migrate to Buster
+
+ -- Vincent Sanders <vince@pexip.com>  Fri, 28 Feb 2020 22:33:15 +0000
+
 init-system-helpers (1.56+nmu1) unstable; urgency=medium
 
   * Non-maintainer upload.
