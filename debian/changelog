@@ -1,3 +1,56 @@
+init-system-helpers (1.60) unstable; urgency=medium
+
+  * deb-systemd-*, update-rc.d: Don't hard-code path to systemctl binary.
+    This should simplify an eventual move of systemctl from /bin to /usr/bin.
+  * Switch to debhelper-compat and bump compat level to 13
+  * Bump Standards-Version to 4.5.1
+  * Drop obsolete Breaks/Replaces and Conflicts
+  * Remove init-system-helpers.lintian-overrides, no longer needed
+
+ -- Michael Biebl <biebl@debian.org>  Mon, 14 Dec 2020 21:19:00 +0100
+
+init-system-helpers (1.59) unstable; urgency=medium
+
+  * invoke-rc.d: Remove unnecessary systemctl daemon-reload.
+    We have proper support in update-rc.d and debhelper nowadays, which
+    makes this superfluous.
+  * invoke-rc.d,service: Stop using ignore-dependencies.
+    Ignoring dependencies during bootup and shutdown can have undesired
+    side-effects, like changing the ordering of services and ultimately
+    causing them to fail. So drop this hack, which was added to work around
+    issues in hook scripts. We only keep a special case for reload requests,
+    where we schedule those with "no-block" to avoid unnecessary dead-locks.
+    (Closes: #960595)
+
+ -- Michael Biebl <biebl@debian.org>  Thu, 19 Nov 2020 23:35:09 +0100
+
+init-system-helpers (1.58) unstable; urgency=medium
+
+  [ Guilhem Moulin ]
+  * Ensure dh_installsystemduser(1)-added snippets pass piuparts.
+    Claim ownership of /etc/systemd/user (like /etc/systemd/system)
+    and make `deb-systemd-helper --user unmask` remove
+    /var/lib/systemd/deb-systemd-user-helper-masked if empty
+    (like `deb-systemd-helper unmask` does for
+    /var/lib/systemd/deb-systemd-helper-masked).
+    For packages shipping user units installed with dh_installsystemduser(1).
+    (Closes: #964159)
+
+  [ Michael Biebl ]
+  * man: Fix typo in service(8) man page (Closes: #925995)
+  * update-rc.d: Consider /usr/lib/systemd/system when searching for unit files
+
+ -- Michael Biebl <biebl@debian.org>  Sun, 05 Jul 2020 11:50:05 +0200
+
+init-system-helpers (1.57) unstable; urgency=medium
+
+  [ Dmitry Bogatov ]
+  * Document that `service` does not check /usr/sbin/policy-rc.d.
+    It is an administrator interface, so it is meant to be able to start
+    disabled services. (Closes: #656081)
+
+ -- Michael Biebl <biebl@debian.org>  Fri, 21 Jun 2019 20:56:55 +0200
+
 init-system-helpers (1.56+nmu1pexip2) pexip; urgency=medium
 
   * Rebuild in buster environment
@@ -9,13 +62,6 @@ init-system-helpers (1.56+nmu1pexip1) pexip; urgency=medium
   * Migrate to Buster
 
  -- Vincent Sanders <vince@pexip.com>  Fri, 28 Feb 2020 22:33:15 +0000
-
-init-system-helpers (1.56+nmu1) unstable; urgency=medium
-
-  * Non-maintainer upload.
-  * Add `runit-init' as alternative pre-dependency (Closes: #838480)
-
- -- Dmitry Bogatov <KAction@debian.org>  Mon, 03 Dec 2018 23:10:03 +0000
 
 init-system-helpers (1.56) unstable; urgency=medium
 
