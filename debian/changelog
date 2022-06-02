@@ -1,3 +1,9 @@
+init-system-helpers (1.60pexip1) pexip; urgency=medium
+
+  * Initial bullseye build
+
+ -- Mark Hymers <mark.hymers@pexip.com>  Thu, 02 Jun 2022 14:42:18 +0100
+
 init-system-helpers (1.60) unstable; urgency=medium
 
   * deb-systemd-*, update-rc.d: Don't hard-code path to systemctl binary.
