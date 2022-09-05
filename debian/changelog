@@ -1,3 +1,9 @@
+init-system-helpers (1.60pexip3) pexip-bullseye; urgency=medium
+
+  * Bullseye rebuild for ARM64 inclusion
+
+ -- Mark Hymers <mark.hymers@pexip.com>  Mon, 05 Sep 2022 10:31:59 +0100
+
 init-system-helpers (1.60pexip2) pexip-bullseye; urgency=medium
 
   * Main bullseye build
