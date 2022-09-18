@@ -14,6 +14,8 @@ use helpers;
 
 test_setup();
 
+my $dpkg_root = $ENV{DPKG_ROOT} // '';
+
 #
 # "is-enabled" is not true for a random, non-existing unit file
 #
@@ -34,8 +36,8 @@ isnt_debian_installed($random_unit, user => 1);
 # "is-enabled" is not true for a random, existing user unit file
 #
 
-my $servicefile_path = "/usr/lib/systemd/user/$random_unit";
-make_path('/usr/lib/systemd/user');
+my $servicefile_path = "$dpkg_root/usr/lib/systemd/user/$random_unit";
+make_path("$dpkg_root/usr/lib/systemd/user");
 open($fh, '>', $servicefile_path);
 print $fh <<'EOT';
 [Unit]
@@ -60,15 +62,15 @@ isnt_debian_installed($random_unit, user => 1);
 
 unless ($ENV{'TEST_ON_REAL_SYSTEM'}) {
     # This might exist if we don't start from a fresh directory
-    ok(! -d '/etc/systemd/user/default.target.wants',
+    ok(! -d "$dpkg_root/etc/systemd/user/default.target.wants",
        'default.target.wants does not exist yet');
 }
 
 my $retval = dsh('--user', 'enable', $random_unit);
 is($retval, 0, "enable command succeeded");
-my $symlink_path = "/etc/systemd/user/default.target.wants/$random_unit";
+my $symlink_path = "$dpkg_root/etc/systemd/user/default.target.wants/$random_unit";
 ok(-l $symlink_path, "$random_unit was enabled");
-is(readlink($symlink_path), $servicefile_path,
+is($dpkg_root . readlink($symlink_path), $servicefile_path,
     "symlink points to $servicefile_path");
 
 #
@@ -100,7 +102,7 @@ isnt_enabled($random_unit, user => 1);
 # "disable" deletes the statefile when purging
 #
 
-my $statefile = "/var/lib/systemd/deb-systemd-user-helper-enabled/$random_unit.dsh-also";
+my $statefile = "$dpkg_root/var/lib/systemd/deb-systemd-user-helper-enabled/$random_unit.dsh-also";
 
 ok(-f $statefile, 'state file exists');
 
@@ -183,7 +185,7 @@ is_debian_installed($random_unit, user => 1);
 # "mask" (when enabled) results in the symlink pointing to /dev/null
 #
 
-my $mask_path = "/etc/systemd/user/$random_unit";
+my $mask_path = "$dpkg_root/etc/systemd/user/$random_unit";
 ok(! -l $mask_path, 'mask link does not exist yet');
 
 $retval = dsh('--user', 'mask', $random_unit);
@@ -292,22 +294,22 @@ close($fh);
 
 isnt_enabled($random_unit, user => 1);
 isnt_enabled('foo\x2dtest.service', user => 1);
-my $alias_path = '/etc/systemd/user/foo\x2dtest.service';
+my $alias_path = $dpkg_root . '/etc/systemd/user/foo\x2dtest.service';
 ok(! -l $alias_path, 'alias link does not exist yet');
 $retval = dsh('--user', 'enable', $random_unit);
 is($retval, 0, "enable command succeeded");
-is(readlink($alias_path), $servicefile_path, 'correct alias link');
+is($dpkg_root . readlink($alias_path), $servicefile_path, 'correct alias link');
 is_enabled($random_unit, user => 1);
 ok(! -l $mask_path, 'mask link does not exist yet');
 
 $retval = dsh('--user', 'mask', $random_unit);
 is($retval, 0, "mask command succeeded");
-is(readlink($alias_path), $servicefile_path, 'correct alias link');
+is($dpkg_root . readlink($alias_path), $servicefile_path, 'correct alias link');
 is(readlink($mask_path), '/dev/null', 'service masked');
 
 $retval = dsh('--user', 'unmask', $random_unit);
 is($retval, 0, "unmask command succeeded");
-is(readlink($alias_path), $servicefile_path, 'correct alias link');
+is($dpkg_root . readlink($alias_path), $servicefile_path, 'correct alias link');
 ok(! -l $mask_path, 'mask link does not exist any more');
 
 $retval = dsh('--user', 'disable', $random_unit);
@@ -322,13 +324,13 @@ $retval = dsh('--user', 'purge', $random_unit);
 is($retval, 0, "purge command succeeded");
 $retval = dsh('--user', 'enable', $random_unit);
 is($retval, 0, "enable command succeeded");
-is(readlink($alias_path), $servicefile_path, 'correct alias link');
+is($dpkg_root . readlink($alias_path), $servicefile_path, 'correct alias link');
 
 unlink($servicefile_path);
 
 $retval = dsh('--user', 'mask', $random_unit);
 is($retval, 0, "mask command succeeded with uninstalled unit");
-is(readlink($alias_path), $servicefile_path, 'correct alias link');
+is($dpkg_root . readlink($alias_path), $servicefile_path, 'correct alias link');
 is(readlink($mask_path), '/dev/null', 'service masked');
 
 $retval = dsh('--user', 'purge', $random_unit);
@@ -400,12 +402,12 @@ close($fh);
 
 isnt_enabled($random_unit, user => 1);
 isnt_enabled('baz\x2dtest.service', user => 1);
-$alias_path = '/etc/systemd/user/baz\x2dtest.service';
+$alias_path = $dpkg_root . '/etc/systemd/user/baz\x2dtest.service';
 ok(! -l $alias_path, 'alias link does not exist yet');
 $retval = dsh('--user', 'enable', $random_unit);
 is($retval, 0, "enable command succeeded");
 is_enabled($random_unit, user => 1);
 ok(-l $alias_path, 'alias link does exist');
-is(readlink($alias_path), $servicefile_path, 'correct alias link');
+is($dpkg_root . readlink($alias_path), $servicefile_path, 'correct alias link');
 
 done_testing;

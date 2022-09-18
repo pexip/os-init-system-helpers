@@ -1,3 +1,120 @@
+init-system-helpers (1.65.2) unstable; urgency=low
+
+  * Undo yet another hostile and baseless NMU.
+
+ -- Luca Boccassi <bluca@debian.org>  Sun, 18 Sep 2022 02:53:19 +0100
+
+init-system-helpers (1.65.1) unstable; urgency=low
+
+  * Undo hostile NMU.
+
+ -- Luca Boccassi <bluca@debian.org>  Sun, 18 Sep 2022 01:53:32 +0100
+
+init-system-helpers (1.65) unstable; urgency=low
+
+  * Upload to unstable.
+
+ -- Luca Boccassi <bluca@debian.org>  Sat, 17 Sep 2022 21:11:07 +0100
+
+init-system-helpers (1.65~exp2) experimental; urgency=medium
+
+  * fakechroot tests: skip on architectures where it is not available
+
+ -- Luca Boccassi <bluca@debian.org>  Thu, 15 Sep 2022 21:14:08 +0100
+
+init-system-helpers (1.65~exp1) experimental; urgency=medium
+
+  [ Luca Boccassi ]
+  * Drop outdated conflict with file-rc
+  * Add myself to Uploaders
+  * d/rules: use execute_after instead of override
+  * Add a dependency on usrmerge | usr-is-merged to complete the
+    transition. As per ctte decision and discussion at:
+    https://lists.debian.org/debian-ctte/2022/07/msg00019.html
+    https://lists.debian.org/debian-ctte/2022/07/msg00061.html
+    https://lists.debian.org/debian-ctte/2022/08/msg00006.html
+
+  [ Victor Westerhuis ]
+  * Make deb-systemd-helper work on template units with DefaultInstance.
+    DefaultInstance only influences the meaning of WantedBy/RequiredBy.
+    Alias and Also are not impacted. This patch does not enable changing
+    template instantiations, so `deb-systemd-helper enable
+    getty@tty2.service` will still fail.
+  * Fix tests depending on ordering of lines in state file. The previous
+    commit changes the order in which lines are written to the state file.
+    Because correctness does not depend on the order in which the state
+    file is written, ignore the order in the test.
+
+ -- Luca Boccassi <bluca@debian.org>  Sat, 10 Sep 2022 13:27:16 +0100
+
+init-system-helpers (1.64) unstable; urgency=medium
+
+  * Team upload.
+  * d-s-h: break infinite recursion on symlinks. (Closes: #1014119)
+  * Bump Standards-Version to 4.6.1, no changes
+  * Update date ranges in d/copyright
+
+ -- Luca Boccassi <bluca@debian.org>  Mon, 04 Jul 2022 11:19:08 +0100
+
+init-system-helpers (1.63) unstable; urgency=medium
+
+  [ Debian Janitor ]
+  * Remove constraints unnecessary since buster
+    * init-system-helpers: Drop versioned constraint on perl-base in Depends.
+    * init: Drop versioned constraint on init-system-helpers in Depends.
+
+  [ Johannes Schauer Marin Rodrigues ]
+  * t/helpers.pm: use installed version of deb-systemd-helper if
+    TEST_INSTALLED is set
+  * add DPKG_ROOT support (Closes: #983421)
+
+  [ Niels Thykier ]
+  * Add additional error checking on write operations.
+    The `close()` call can fail on both read and write - while the read is
+    usually relatively benign, for the write counter part can include "fun"
+    errors. Most of these would most likely be persistent issues, but it makes
+    sense to detect errors as early possible.
+
+  [ Ville Skyttä ]
+  * service: use `grep -F` instead of `egrep`
+    `egrep` and `fgrep` have been deprecated in GNU grep since 2007, and in
+    current post 3.7 Git they have been made to emit obsolescence warnings.
+    The occurrence in `service` uses a non-regex argument, so switch to `grep
+    -F` instead of `-E`.
+
+ -- Michael Biebl <biebl@debian.org>  Mon, 23 May 2022 22:48:30 +0200
+
+init-system-helpers (1.62) unstable; urgency=medium
+
+  * Team upload.
+
+  [ Johannes Schauer Marin Rodrigues ]
+  * use fakechroot instead of unsharing the mount namespace and mounting tmpfs
+
+  [ Luca Boccassi ]
+  * deb-systemd-invoke: systemctl --machine @<UID> is now available in
+    v249.10. Adjust the version check accordingly
+  * Skip build-time tests if DEB_BUILD_OPTIONS=nocheck is set
+  * Fix typos found by Lintian
+  * Set Rules-Requires-Root: no
+
+ -- Luca Boccassi <bluca@debian.org>  Tue, 15 Feb 2022 22:32:46 +0000
+
+init-system-helpers (1.61) unstable; urgency=medium
+
+  * Team upload.
+  * deb-systemd-invoke: add support for starting/stopping units in user
+    instances. Right now if a package adds/removes a user unit, we cannot
+    automatically start it/stop it/restart it. systemd v250 adds the
+    ability to talk to user instances of the manager via the '--machine
+    <ID>@' option. The list of IDs can be queried by wildcard-querying
+    with 'list-units user@*'. Use this to add a --user option and let
+    callers start/stop/restart user units. Print a log message and skip it
+    if systemd < 250.
+  * Bump Standards-Version to 4.6.0, no changes
+
+ -- Luca Boccassi <bluca@debian.org>  Wed, 08 Dec 2021 14:42:38 +0000
+
 init-system-helpers (1.60) unstable; urgency=medium
 
   * deb-systemd-*, update-rc.d: Don't hard-code path to systemctl binary.

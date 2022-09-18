@@ -2,8 +2,15 @@
 set -eu
 
 export TEST_ON_REAL_SYSTEM=1
+export TEST_INSTALLED=1
 
+# test with fakechroot
 for test in t/*.t; do
-    echo "======== $(basename $test) ======="
-    perl $test
+    echo "======== $(basename $test) (fakechroot) ======="
+    fakechroot fakeroot perl $test
+done
+# test with DPKG_ROOT
+for test in t/*.t; do
+    echo "======== $(basename $test) (DPKG_ROOT) ======="
+    TEST_DPKG_ROOT=1 perl $test
 done

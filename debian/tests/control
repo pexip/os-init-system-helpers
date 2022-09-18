@@ -1,4 +1,7 @@
 Tests: t
 Depends: @,
-  build-essential
-Restrictions: needs-root, breaks-testbed, allow-stderr, isolation-container
+  build-essential,
+  fakeroot,
+  fakechroot,
+  libtest-deep-perl
+Restrictions: allow-stderr
