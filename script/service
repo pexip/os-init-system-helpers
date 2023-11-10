@@ -83,7 +83,7 @@ while [ $# -gt 0 ]; do
 		    && [ -x "${SERVICEDIR}/${SERVICE}" ]; then
                         out=$(env -i LANG="$LANG" LANGUAGE="$LANGUAGE" LC_CTYPE="$LC_CTYPE" LC_NUMERIC="$LC_NUMERIC" LC_TIME="$LC_TIME" LC_COLLATE="$LC_COLLATE" LC_MONETARY="$LC_MONETARY" LC_MESSAGES="$LC_MESSAGES" LC_PAPER="$LC_PAPER" LC_NAME="$LC_NAME" LC_ADDRESS="$LC_ADDRESS" LC_TELEPHONE="$LC_TELEPHONE" LC_MEASUREMENT="$LC_MEASUREMENT" LC_IDENTIFICATION="$LC_IDENTIFICATION" LC_ALL="$LC_ALL" PATH="$PATH" TERM="$TERM" "$SERVICEDIR/$SERVICE" status 2>&1)
                         retval=$?
-                        if echo "$out" | egrep -iq "usage:"; then
+                        if echo "$out" | grep -Fiq "usage:"; then
                           #printf " %s %-60s %s\n" "[?]" "$SERVICE:" "unknown" 1>&2
                           echo " [ ? ]  $SERVICE" 1>&2
                           continue

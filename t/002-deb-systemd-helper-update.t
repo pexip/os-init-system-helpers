@@ -4,6 +4,7 @@
 use strict;
 use warnings;
 use Test::More;
+use Test::Deep qw(:preload cmp_bag);
 use File::Temp qw(tempfile tempdir); # in core since perl 5.6.1
 use File::Path qw(make_path); # in core since Perl 5.001
 use File::Basename; # in core since Perl 5
@@ -13,6 +14,8 @@ use lib "$FindBin::Bin/.";
 use helpers;
 
 test_setup();
+
+my $dpkg_root = $ENV{DPKG_ROOT} // '';
 
 # ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
 # ┃ Verify “is-enabled” is not true for a random, non-existing unit file.     ┃
@@ -25,9 +28,9 @@ my ($fh, $random_unit) = tempfile('unitXXXXX',
 close($fh);
 $random_unit = basename($random_unit);
 
-my $statefile = "/var/lib/systemd/deb-systemd-helper-enabled/$random_unit.dsh-also";
-my $servicefile_path = "/lib/systemd/system/$random_unit";
-make_path('/lib/systemd/system');
+my $statefile = "$dpkg_root/var/lib/systemd/deb-systemd-helper-enabled/$random_unit.dsh-also";
+my $servicefile_path = "$dpkg_root/lib/systemd/system/$random_unit";
+make_path("$dpkg_root/lib/systemd/system");
 open($fh, '>', $servicefile_path);
 print $fh <<'EOT';
 [Unit]
@@ -46,9 +49,9 @@ close($fh);
 # ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
 
 my $retval = dsh('enable', $random_unit);
-my $symlink_path = "/etc/systemd/system/multi-user.target.wants/$random_unit";
+my $symlink_path = "$dpkg_root/etc/systemd/system/multi-user.target.wants/$random_unit";
 ok(-l $symlink_path, "$random_unit was enabled");
-is(readlink($symlink_path), $servicefile_path,
+is($dpkg_root . readlink($symlink_path), $servicefile_path,
     "symlink points to $servicefile_path");
 
 # ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
@@ -89,12 +92,12 @@ is_deeply(
 # ┃ Verify “enable” creates the new symlinks.                                 ┃
 # ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
 
-my $new_symlink_path = '/etc/systemd/system/newalias.service';
+my $new_symlink_path = "$dpkg_root/etc/systemd/system/newalias.service";
 ok(! -l $new_symlink_path, 'new symlink does not exist yet');
 
 $retval = dsh('enable', $random_unit);
 ok(-l $new_symlink_path, 'new symlink was created');
-is(readlink($new_symlink_path), $servicefile_path,
+is($dpkg_root . readlink($new_symlink_path), $servicefile_path,
     "symlink points to $servicefile_path");
 
 is_enabled($random_unit);
@@ -103,7 +106,7 @@ is_enabled($random_unit);
 # ┃ Verify the new symlink was recorded in the state file.                    ┃
 # ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
 
-is_deeply(
+cmp_bag(
     [ state_file_entries($statefile) ],
     [ $symlink_path, $new_symlink_path ],
     'state file updated');
@@ -131,7 +134,7 @@ is($retval >> 8, 0, "random unit file was-enabled");
 # ┃ Verify the new symlink is not yet in the state file.                      ┃
 # ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
 
-is_deeply(
+cmp_bag(
     [ state_file_entries($statefile) ],
     [ $symlink_path, $new_symlink_path ],
     'state file does not contain the new link yet');
@@ -141,7 +144,7 @@ is_deeply(
 # ┃ state file.                                                               ┃
 # ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
 
-my $new_symlink_path2 = '/etc/systemd/system/another.service';
+my $new_symlink_path2 = "$dpkg_root/etc/systemd/system/another.service";
 ok(! -l $new_symlink_path2, 'new symlink does not exist yet');
 
 $retval = dsh('update-state', $random_unit);
@@ -149,7 +152,7 @@ ok(! -l $new_symlink_path2, 'new symlink still does not exist');
 
 isnt_enabled($random_unit);
 
-is_deeply(
+cmp_bag(
     [ state_file_entries($statefile) ],
     [ $symlink_path, $new_symlink_path, $new_symlink_path2 ],
     'state file updated');

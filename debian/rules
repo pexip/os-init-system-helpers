@@ -15,8 +15,7 @@ override_dh_perl:
 	dh_perl -d --package=init-system-helpers
 	dh_perl --no-package=init-system-helpers
 
-override_dh_auto_build:
-	dh_auto_build
+execute_after_dh_auto_build:
 	set -e ; \
 	for file in script/deb-*; do \
 		pod2man --section=1p --utf8 --center="init-system-helpers" --release=$(DEB_VERSION) $$file $$file.1p; \
@@ -26,8 +25,7 @@ override_dh_auto_build:
 		rst2man $$file $${file%.rst}.8 ; \
 	done
 
-override_dh_install:
-	dh_install
+execute_after_dh_install:
 	[ ! -d debian/init-system-helpers ] || sed -i 's/__VERSION__/$(DEB_VERSION)/' debian/init-system-helpers/usr/sbin/service
 
 
@@ -37,6 +35,24 @@ override_dh_gencontrol:
 	else \
 		dh_gencontrol -- -Valt:sysvinit="| sysvinit-core"; \
 	fi
+
+override_dh_auto_test:
+ifeq (,$(filter nocheck,$(DEB_BUILD_OPTIONS)))
+ifeq (,$(filter $(DEB_HOST_ARCH),hurd-i386 ia64 kfreebsd-amd64 kfreebsd-i386 x32))
+	# test with fakechroot
+	set -eu; \
+	for test in t/*.t; do \
+	    echo "======== $$(basename $$test) (fakechroot) ======="; \
+	    fakechroot fakeroot perl $$test; \
+	done
+endif
+	# test with DPKG_ROOT
+	set -eu; \
+	for test in t/*.t; do \
+	    echo "======== $$(basename $$test) (DPKG_ROOT) ======="; \
+	    TEST_DPKG_ROOT=1 perl $$test; \
+	done
+endif
 
 %:
 	dh $@

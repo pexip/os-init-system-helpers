@@ -1,52 +1,110 @@
+use strict;
+use warnings;
+use English;
 use File::Temp qw(tempdir); # in core since perl 5.6.1
-use if !$ENV{'TEST_ON_REAL_SYSTEM'}, "Linux::Clone"; # neither in core nor in Debian :-/
+use File::Copy qw(cp);
+use File::Path qw(make_path);
 
-sub bind_mount_tmp {
-    my ($dir) = @_;
-    my $tmp = tempdir(CLEANUP => 1);
-    system("mount -n --bind $tmp $dir") == 0
-        or BAIL_OUT("bind-mounting $tmp to $dir failed: $!");
-    return $tmp;
+sub check_fakechroot_running() {
+    my $content = `FAKECHROOT_DETECT=1 sh -c "echo This should not be printed"`;
+    my $result = 0;
+    if ($content =~ /^fakechroot [0-9.]+\n$/) {
+        $result = 1;
+    }
+    return $result;
 }
 
-# In a new mount namespace, bindmount tmpdirs on /etc/systemd,
-# /lib/systemd/system, and /var/lib/systemd to start with clean state
-# yet use the actual locations and code paths.  The test harnesses use
-# systemctl which is linked to /lib/systemd/libsystemd-shared-$ver.so,
-# thus do not bindmount a tmpdir on /lib/systemd.
 sub test_setup() {
-    unless ($ENV{'TEST_ON_REAL_SYSTEM'}) {
-        open(my $fh, '<', "/proc/$$/mountinfo")
-            or BAIL_OUT("Cannot open(/proc/$$/mountinfo): $!");
-
-        # Check that the root filesystem has been made private.
-        @shared = grep { /shared:\d+/ } grep { /^\d+ \d+ \d+:\d+ \/ \/ / } <$fh>;
-        BAIL_OUT("Root filesystem not marked as a private subtree.  " .
-                 "Execute 'mount --make-private /'") if @shared;
-
-        close($fh);
-
-        my $retval = Linux::Clone::unshare Linux::Clone::NEWNS;
-        BAIL_OUT("Cannot unshare(NEWNS): $!") if $retval != 0;
-
-        # Make sure that the tests do not clutter the system by
-        # remounting the root filesystem read-only.
-        system("mount -n -o bind,ro / /") == 0
-            or BAIL_OUT("bind-mounting / read-only failed: $!");
-
-        # We still need to be able to create temporary files and
-        # directories: mount a tmpfs on /tmp.
-        system("mount -n -t tmpfs tmpfs /tmp") == 0
-            or BAIL_OUT("mounting tmpfs on /tmp failed: $!");
-
-        my $etc_systemd = bind_mount_tmp('/etc/systemd');
-        my $lib_systemd_system = bind_mount_tmp('/lib/systemd/system');
-        my $lib_systemd_user = bind_mount_tmp('/usr/lib/systemd/user');
-        my $var_lib_systemd = bind_mount_tmp('/var/lib/systemd');
-
-        # Tell `systemctl` to do not speak with the world outside our namespace.
-        $ENV{'SYSTEMCTL_INSTALL_CLIENT_SIDE'} = '1'
+    if (length $ENV{TEST_DPKG_ROOT}) {
+        print STDERR "test_setup() with DPKG_ROOT\n";
+        $ENV{DPKG_ROOT} = tempdir( CLEANUP => 1 );
+        return;
     }
+
+    if ( !check_fakechroot_running ) {
+	print STDERR "you have to run this script inside fakechroot and fakeroot:\n";
+	print STDERR ("    fakechroot fakeroot perl $PROGRAM_NAME" . (join " ", @ARGV) . "\n");
+	exit 1;
+    }
+
+    # Set up a chroot that contains everything necessary to run
+    # deb-systemd-helper under fakechroot.
+    print STDERR "test_setup() with fakechroot\n";
+
+    my $tmpdir = tempdir( CLEANUP => 1 );
+    mkdir "$tmpdir/dev";
+    0 == system 'mknod', "$tmpdir/dev/null", 'c', '1', '3' or die "cannot mknod: $?";
+    mkdir "$tmpdir/tmp";
+    make_path("$tmpdir/usr/bin");
+    make_path("$tmpdir/usr/lib/systemd/user");
+    make_path("$tmpdir/lib/systemd/system/");
+    make_path("$tmpdir/var/lib/systemd");
+    make_path("$tmpdir/etc/systemd");
+    if ( length $ENV{TEST_INSTALLED} ) {
+        # if we test the installed deb-systemd-helper we copy it from the
+        # system's installation
+        cp "/usr/bin/deb-systemd-helper", "$tmpdir/usr/bin/deb-systemd-helper"
+          or die "cannot copy: $!";
+    }
+    else {
+        cp "$FindBin::Bin/../script/deb-systemd-helper",
+          "$tmpdir/usr/bin/deb-systemd-helper"
+          or die "cannot copy: $!";
+    }
+
+    # make sure that dpkg diversion messages are not translated
+    local $ENV{LC_ALL} = 'C.UTF-8';
+    # the chroot only needs to contain a working perl-base
+    open my $fh, '-|', 'dpkg-query', '--listfiles', 'perl-base';
+
+    while ( my $path = <$fh> ) {
+        chomp $path;
+        # filter out diversion messages in the same way that dpkg-repack does
+        # https://git.dpkg.org/cgit/dpkg/dpkg-repack.git/tree/dpkg-repack#n238
+        if ($path =~ /^package diverts others to: /) {
+            next;
+        }
+        if ($path =~ /^diverted by [^ ]+ to: /) {
+            next;
+        }
+        if ($path =~ /^locally diverted to: /) {
+            next;
+        }
+        if ($path !~ /^\//) {
+            die "path must start with a slash";
+        }
+        if ( -e "$tmpdir$path" ) {
+            # ignore paths that were already created
+            next;
+        } elsif ( !-r $path ) {
+            # if the host's path is not readable, assume it's a directory
+            mkdir "$tmpdir$path" or die "cannot mkdir $path: $!";
+        } elsif ( -l $path ) {
+            symlink readlink($path), "$tmpdir$path";
+        } elsif ( -d $path ) {
+            mkdir "$tmpdir$path" or die "cannot mkdir $path: $!";
+        } elsif ( -f $path ) {
+            cp $path, "$tmpdir$path" or die "cannot cp $path: $!";
+        } else {
+            die "cannot handle $path";
+        }
+    }
+    close $fh;
+
+    $ENV{'SYSTEMCTL_INSTALL_CLIENT_SIDE'} = '1';
+
+    # we run the chroot call in a child process because we need the parent
+    # process remaining un-chrooted or otherwise it cannot clean-up the
+    # temporary directory on exit
+    my $pid = fork() // die "cannot fork: $!";
+    if ( $pid == 0 ) {
+        chroot $tmpdir or die "cannot chroot: $!";
+        chdir "/"      or die "cannot chdir to /: $!";
+        return;
+    }
+    waitpid($pid, 0);
+
+    exit $?;
 }
 
 # reads in a whole file
@@ -59,10 +117,24 @@ sub slurp {
 sub state_file_entries {
     my ($path) = @_;
     my $bytes = slurp($path);
-    return split("\n", $bytes);
+    my $dpkg_root = $ENV{DPKG_ROOT} // '';
+    return map { "$dpkg_root$_" } split("\n", $bytes);
 }
 
-my $dsh = "$FindBin::Bin/../script/deb-systemd-helper";
+my $dsh = '';
+if ( length $ENV{TEST_INSTALLED} ) {
+    # if we are to test the installed version of deb-systemd-helper then even
+    # in DPKG_ROOT mode, we want to run /usr/bin/deb-systemd-helper
+    $dsh = "/usr/bin/deb-systemd-helper";
+} else {
+    if ( length $ENV{TEST_DPKG_ROOT} ) {
+        # when testing deb-systemd-helper from source, then in DPKG_ROOT mode,
+        # we take the script from the source directory
+        $dsh = "$FindBin::Bin/../script/deb-systemd-helper";
+    } else {
+        $dsh = "/usr/bin/deb-systemd-helper";
+    }
+}
 $ENV{'DPKG_MAINTSCRIPT_PACKAGE'} = 'deb-systemd-helper-test';
 
 sub dsh {

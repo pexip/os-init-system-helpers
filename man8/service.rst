@@ -14,7 +14,7 @@ run a System V init script
 
 :Version:   Jan 2006
 :Copyright: 2006 Red Hat, Inc.,  Petter Reinholdtsen <pere@hungry.com>
-:Licence:   GNU Public Licence v2 (GPLv2)
+:License:   GNU General Public License v2 (GPLv2)
 
 
 SYNOPSIS

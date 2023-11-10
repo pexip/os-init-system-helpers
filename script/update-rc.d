@@ -11,6 +11,7 @@ use warnings;
 
 my $initd = "/etc/init.d";
 my $etcd  = "/etc/rc";
+my $dpkg_root = $ENV{DPKG_ROOT} // '';
 
 # Print usage message and die.
 
@@ -62,11 +63,11 @@ sub make_path {
 # 0 or 6.
 sub script_runlevels {
     my ($scriptname) = @_;
-    my @links=<"/etc/rc[S12345].d/S[0-9][0-9]$scriptname">;
+    my @links=<"$dpkg_root/etc/rc[S12345].d/S[0-9][0-9]$scriptname">;
     if (@links) {
         return map(substr($_, 7, 1), @links);
-    } elsif (! <"/etc/rc[S12345].d/K[0-9][0-9]$scriptname">) {
-        @links=<"/etc/rc[06].d/K[0-9][0-9]$scriptname">;
+    } elsif (! <"$dpkg_root/etc/rc[S12345].d/K[0-9][0-9]$scriptname">) {
+        @links=<"$dpkg_root/etc/rc[06].d/K[0-9][0-9]$scriptname">;
         return ("6") if (@links);
     } else {
 	return ;
@@ -89,6 +90,10 @@ sub openrc_rlconv {
 }
 
 sub systemd_reload {
+    if (length $ENV{DPKG_ROOT}) {
+	# if we operate on a chroot from the outside, do not attempt to reload
+	return;
+    }
     if (-d "/run/systemd/system") {
         system("systemctl", "daemon-reload");
     }
@@ -102,24 +107,24 @@ sub make_sysv_links {
     # for "remove" we cannot rely on the init script still being present, as
     # this gets called in postrm for purging. Just remove all symlinks.
     if ("remove" eq $action) { unlink($_) for
-        glob("/etc/rc?.d/[SK][0-9][0-9]$scriptname"); return; }
+        glob("$dpkg_root/etc/rc?.d/[SK][0-9][0-9]$scriptname"); return; }
 
     # if the service already has any links, do not touch them
     # numbers we don't care about, but enabled/disabled state we do
-    return if glob("/etc/rc?.d/[SK][0-9][0-9]$scriptname");
+    return if glob("$dpkg_root/etc/rc?.d/[SK][0-9][0-9]$scriptname");
 
     # for "defaults", parse Default-{Start,Stop} and create these links
-    my ($lsb_start_ref, $lsb_stop_ref) = parse_def_start_stop("/etc/init.d/$scriptname");
+    my ($lsb_start_ref, $lsb_stop_ref) = parse_def_start_stop("$dpkg_root/etc/init.d/$scriptname");
     my $start = $action eq "defaults-disabled" ? "K" : "S";
     foreach my $lvl (@$lsb_start_ref) {
-        make_path("/etc/rc$lvl.d");
-        my $l = "/etc/rc$lvl.d/${start}01$scriptname";
+        make_path("$dpkg_root/etc/rc$lvl.d");
+        my $l = "$dpkg_root/etc/rc$lvl.d/${start}01$scriptname";
         symlink("../init.d/$scriptname", $l);
     }
 
     foreach my $lvl (@$lsb_stop_ref) {
-        make_path("/etc/rc$lvl.d");
-        my $l = "/etc/rc$lvl.d/K01$scriptname";
+        make_path("$dpkg_root/etc/rc$lvl.d");
+        my $l = "$dpkg_root/etc/rc$lvl.d/K01$scriptname";
         symlink("../init.d/$scriptname", $l);
     }
 }
@@ -137,10 +142,14 @@ sub make_systemd_links {
 
     # If systemctl is available, let's use that to create the symlinks.
     if (-x "/bin/systemctl" || -x "/usr/bin/systemctl") {
+        my $systemd_root = '/';
+        if ($dpkg_root ne '') {
+            $systemd_root = $dpkg_root;
+        }
         # Set this env var to avoid loop in systemd-sysv-install.
         local $ENV{SYSTEMCTL_SKIP_SYSV} = 1;
         # Use --quiet to mimic the old update-rc.d behaviour.
-        system("systemctl", "--quiet", "$action", "$scriptname");
+        system("systemctl", "--root=$systemd_root", "--quiet", "$action", "$scriptname");
         return;
     }
 
@@ -492,7 +501,7 @@ sub sysv_toggle {
             warning("$act action will have no effect on runlevel $lvl");
             next;
         }
-        push(@symlinks, $_) for glob("/etc/rc$lvl.d/[SK][0-9][0-9]$name");
+        push(@symlinks, $_) for glob("$dpkg_root/etc/rc$lvl.d/[SK][0-9][0-9]$name");
     }
 
     if (!@symlinks) {
@@ -523,5 +532,5 @@ sub is_initscripts_installed {
     # Check if mountkernfs is available. We cannot make inferences
     # using the running init system because we may be running in a
     # chroot
-    return  glob('/etc/rcS.d/S??mountkernfs.sh');
+    return  glob("$dpkg_root/etc/rcS.d/S??mountkernfs.sh");
 }

@@ -14,6 +14,8 @@ use helpers;
 
 test_setup();
 
+my $dpkg_root = $ENV{DPKG_ROOT} // '';
+
 # ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
 # ┃ Verify “is-enabled” is not true for a random, non-existing unit file.     ┃
 # ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
@@ -32,8 +34,8 @@ isnt_debian_installed($random_unit);
 # ┃ Verify “is-enabled” is not true for a random, existing unit file.         ┃
 # ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
 
-my $servicefile_path = "/lib/systemd/system/$random_unit";
-make_path('/lib/systemd/system');
+my $servicefile_path = "$dpkg_root/lib/systemd/system/$random_unit";
+make_path("$dpkg_root/lib/systemd/system");
 open($fh, '>', $servicefile_path);
 print $fh <<'EOT';
 [Unit]
@@ -56,15 +58,15 @@ isnt_debian_installed($random_unit);
 
 unless ($ENV{'TEST_ON_REAL_SYSTEM'}) {
     # This might exist if we don't start from a fresh directory
-    ok(! -d '/etc/systemd/system/multi-user.target.wants',
+    ok(! -d "$dpkg_root/etc/systemd/system/multi-user.target.wants",
        'multi-user.target.wants does not exist yet');
 }
 
 my $retval = dsh('enable', $random_unit);
 is($retval, 0, "enable command succeeded");
-my $symlink_path = "/etc/systemd/system/multi-user.target.wants/$random_unit";
+my $symlink_path = "$dpkg_root/etc/systemd/system/multi-user.target.wants/$random_unit";
 ok(-l $symlink_path, "$random_unit was enabled");
-is(readlink($symlink_path), $servicefile_path,
+is($dpkg_root . readlink($symlink_path), $servicefile_path,
     "symlink points to $servicefile_path");
 
 # ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
@@ -93,7 +95,7 @@ isnt_enabled($random_unit);
 # ┃ Verify “disable” when purging deletes the statefile.                      ┃
 # ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
 
-my $statefile = "/var/lib/systemd/deb-systemd-helper-enabled/$random_unit.dsh-also";
+my $statefile = "$dpkg_root/var/lib/systemd/deb-systemd-helper-enabled/$random_unit.dsh-also";
 
 ok(-f $statefile, 'state file exists');
 
@@ -168,7 +170,7 @@ is_debian_installed($random_unit);
 # ┃ Verify “mask” (when enabled) results in the symlink pointing to /dev/null ┃
 # ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
 
-my $mask_path = "/etc/systemd/system/$random_unit";
+my $mask_path = "$dpkg_root/etc/systemd/system/$random_unit";
 ok(! -l $mask_path, 'mask link does not exist yet');
 
 $retval = dsh('mask', $random_unit);
@@ -277,22 +279,22 @@ close($fh);
 
 isnt_enabled($random_unit);
 isnt_enabled('foo\x2dtest.service');
-my $alias_path = '/etc/systemd/system/foo\x2dtest.service';
+my $alias_path = $dpkg_root . '/etc/systemd/system/foo\x2dtest.service';
 ok(! -l $alias_path, 'alias link does not exist yet');
 $retval = dsh('enable', $random_unit);
 is($retval, 0, "enable command succeeded");
-is(readlink($alias_path), $servicefile_path, 'correct alias link');
+is($dpkg_root . readlink($alias_path), $servicefile_path, 'correct alias link');
 is_enabled($random_unit);
 ok(! -l $mask_path, 'mask link does not exist yet');
 
 $retval = dsh('mask', $random_unit);
 is($retval, 0, "mask command succeeded");
-is(readlink($alias_path), $servicefile_path, 'correct alias link');
+is($dpkg_root . readlink($alias_path), $servicefile_path, 'correct alias link');
 is(readlink($mask_path), '/dev/null', 'service masked');
 
 $retval = dsh('unmask', $random_unit);
 is($retval, 0, "unmask command succeeded");
-is(readlink($alias_path), $servicefile_path, 'correct alias link');
+is($dpkg_root . readlink($alias_path), $servicefile_path, 'correct alias link');
 ok(! -l $mask_path, 'mask link does not exist any more');
 
 $retval = dsh('disable', $random_unit);
@@ -307,13 +309,13 @@ $retval = dsh('purge', $random_unit);
 is($retval, 0, "purge command succeeded");
 $retval = dsh('enable', $random_unit);
 is($retval, 0, "enable command succeeded");
-is(readlink($alias_path), $servicefile_path, 'correct alias link');
+is($dpkg_root . readlink($alias_path), $servicefile_path, 'correct alias link');
 
 unlink($servicefile_path);
 
 $retval = dsh('mask', $random_unit);
 is($retval, 0, "mask command succeeded with uninstalled unit");
-is(readlink($alias_path), $servicefile_path, 'correct alias link');
+is($dpkg_root . readlink($alias_path), $servicefile_path, 'correct alias link');
 is(readlink($mask_path), '/dev/null', 'service masked');
 
 $retval = dsh('purge', $random_unit);
@@ -365,5 +367,107 @@ ok(! -l $mask_path, 'mask link does not exist any more');
 $retval = dsh('purge', $random_unit);
 isnt_enabled($random_unit);
 ok(! -l $mask_path, 'mask link does not exist any more');
+
+# ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+# ┃ Verify WantedBy and Alias with template unit with DefaultInstance.        ┃
+# ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
+
+($fh, $servicefile_path) = tempfile('unit\x2dXXXXX',
+    DIR    => "$dpkg_root/lib/systemd/system",
+    SUFFIX => '@.service',
+    UNLINK => 1);
+print $fh <<'EOT';
+[Unit]
+Description=template test unit
+
+[Service]
+ExecStart=/bin/sleep 1
+
+[Install]
+Alias=foo\x2dtest@.service
+Alias=foo\x2dbar@baz.service
+WantedBy=multi-user.target
+DefaultInstance=instance\x2d
+EOT
+close($fh);
+
+$random_unit = basename($servicefile_path);
+my $random_instance = $random_unit;
+$random_instance =~ s/^(.*\@)(\.\w+)$/$1instance\\x2d$2/;
+
+isnt_enabled($random_unit);
+isnt_enabled('foo\x2dtest@.service');
+isnt_enabled('foo\x2dtest@instance\x2d.service');
+isnt_enabled('foo\x2dbar@baz.service');
+isnt_enabled('foo\x2dbar@instance\x2d.service');
+
+my $template_alias_path = $dpkg_root . '/etc/systemd/system/foo\x2dtest@.service';
+my $instance_alias_path = $dpkg_root . '/etc/systemd/system/foo\x2dbar@baz.service';
+my $template_wanted_path = "$dpkg_root/etc/systemd/system/multi-user.target.wants/$random_unit";
+my $instance_wanted_path = "$dpkg_root/etc/systemd/system/multi-user.target.wants/$random_instance";
+ok(! -l $template_alias_path, 'template alias link does not exist yet');
+ok(! -l $instance_alias_path, 'instance alias link does not exist yet');
+ok(! -l $template_wanted_path, 'template wanted link does not exist yet');
+ok(! -l $instance_wanted_path, 'instance wanted link does not exist yet');
+$retval = dsh('enable', $random_unit);
+is($retval, 0, "enable command succeeded");
+is($dpkg_root . readlink($template_alias_path), $servicefile_path, 'correct template alias link');
+is($dpkg_root . readlink($instance_alias_path), $servicefile_path, 'correct instance alias link');
+ok(! -l $template_wanted_path, 'template wanted link does still not exist');
+is($dpkg_root . readlink($instance_wanted_path), $servicefile_path, 'correct instance wanted link');
+is_enabled($random_unit);
+
+$retval = dsh('disable', $random_unit);
+isnt_enabled($random_unit);
+ok(! -l $template_alias_path, 'template alias link does not exist anymore');
+ok(! -l $instance_alias_path, 'instance alias link does not exist anymore');
+ok(! -l $template_wanted_path, 'template wanted link does still not exist');
+ok(! -l $instance_wanted_path, 'instance wanted link does not exist anymore');
+
+# ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+# ┃ Verify WantedBy and Alias with template unit without DefaultInstance.     ┃
+# ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
+
+open($fh, '>', $servicefile_path);
+print $fh <<'EOT';
+[Unit]
+Description=template test unit
+
+[Service]
+ExecStart=/bin/sleep 1
+
+[Install]
+Alias=foo\x2dtest@.service
+Alias=foo\x2dbar@baz.service
+RequiredBy=foo\x2ddepender@.service
+EOT
+close($fh);
+
+isnt_enabled($random_unit);
+isnt_enabled('foo\x2dtest@.service');
+isnt_enabled('foo\x2dbar@baz.service');
+
+$template_alias_path = $dpkg_root . '/etc/systemd/system/foo\x2dtest@.service';
+$instance_alias_path = $dpkg_root . '/etc/systemd/system/foo\x2dbar@baz.service';
+$template_wanted_path = $dpkg_root . '/etc/systemd/system/foo\x2ddepender@.service.requires/' . $random_unit;
+$instance_wanted_path = $dpkg_root . '/etc/systemd/system/foo\x2ddepender@.service.requires/' . $random_instance;
+ok(! -l $template_alias_path, 'template alias link does not exist yet');
+ok(! -l $instance_alias_path, 'instance alias link does not exist yet');
+ok(! -l $template_wanted_path, 'template wanted link does not exist yet');
+ok(! -l $instance_wanted_path, 'instance wanted link does not exist yet');
+$retval = dsh('enable', $random_unit);
+is($retval, 0, "enable command succeeded");
+is($dpkg_root . readlink($template_alias_path), $servicefile_path, 'correct template alias link');
+is($dpkg_root . readlink($instance_alias_path), $servicefile_path, 'correct instance alias link');
+is($dpkg_root . readlink($template_wanted_path), $servicefile_path, 'correct template wanted link');
+ok(! -l $instance_wanted_path, 'instance wanted link does still not exist');
+is_enabled($random_unit);
+
+$retval = dsh('disable', $random_unit);
+isnt_enabled($random_unit);
+ok(! -l $template_alias_path, 'template alias link does not exist anymore');
+ok(! -l $instance_alias_path, 'instance alias link does not exist anymore');
+ok(! -l $template_wanted_path, 'template wanted link does still not exist');
+ok(! -l $instance_wanted_path, 'instance wanted link does not exist anymore');
 
 done_testing;
