@@ -36,13 +36,14 @@ deb-systemd-invoke - wrapper around systemctl, respecting policy-rc.d
 =head1 SYNOPSIS
 
 B<deb-systemd-invoke> [B<--user>] start|stop|restart S<I<unit file> ...>
+B<deb-systemd-invoke> [B<--user>] [B<--no-dbus>] daemon-reload|daemon-reexec
 
 =head1 DESCRIPTION
 
 B<deb-systemd-invoke> is a Debian-specific helper script which asks
 /usr/sbin/policy-rc.d before performing a systemctl call.
 
-B<deb-systemd-invoke> is intended to be used from maintscripts to start
+B<deb-systemd-invoke> is intended to be used from maintscripts to manage
 systemd unit files. It is specifically NOT intended to be used interactively by
 users. Instead, users should run systemd and use systemctl, or not bother about
 the systemd enabled state in case they are not running systemd.
@@ -54,15 +55,17 @@ use warnings;
 use Getopt::Long; # in core since Perl 5
 
 if (@ARGV < 2) {
-    print STDERR "Syntax: $0 <action> <unit file> [<unit file> ...]\n";
+    print STDERR "Syntax: $0 <action> [<unit file> [<unit file> ...]]\n";
     exit 1;
 }
 
 my $is_system = 1;
+my $use_dbus = 1;
 my @instances = ();
 my $result = GetOptions(
     "user" => sub { $is_system = 0; },
     "system" => sub { $is_system = 1; }, # default
+    "no-dbus" => sub { $use_dbus = 0; },
 );
 
 my $policyhelper = '/usr/sbin/policy-rc.d';
@@ -153,6 +156,31 @@ if ($action eq "start" || $action eq "restart") {
         chomp ($instance);
         system('systemctl', '--quiet', '--user', '--machine', "$instance@", $action, @units);
     }
+    exit(0);
+} elsif (($action eq "daemon-reload" || $action eq "daemon-reexec") && !$is_system && $use_dbus) {
+    my $global_exit_code = 0;
+
+    for my $instance (@instances) {
+        chomp ($instance);
+        system('systemctl', '--quiet', '--user', '--machine', "$instance@", $action);
+    }
+    exit(0);
+} elsif (($action eq "daemon-reload" || $action eq "daemon-reexec") && !$use_dbus) {
+    my $global_exit_code = 0;
+    my $signal;
+
+    if ($action eq "daemon-reload") {
+        $signal = 'SIGHUP';
+    } else {
+        $signal = 'SIGRTMIN+25';
+    }
+
+    if ($is_system) {
+        system('kill', '-s', $signal, '1');
+    } else {
+        system('systemctl', '--quiet', 'kill', '--kill-whom=main', '--signal', $signal, 'user@*.service');
+    }
+
     exit(0);
 } else {
     exec('systemctl', @ARGV);

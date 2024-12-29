@@ -140,6 +140,8 @@ run_via_sysvinit() {
 }
 
 update_openrc_started_symlinks() {
+   # Skip native openrc-run files
+   grep -q '^#! */\(usr/\)\?sbin/openrc-run' $SERVICEDIR/$SERVICE && return
    # maintain the symlinks of /run/openrc/started so that
    # rc-status works with the service command as well
    if [ -d /run/openrc/started ] ; then

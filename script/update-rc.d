@@ -141,7 +141,7 @@ sub make_systemd_links {
     }
 
     # If systemctl is available, let's use that to create the symlinks.
-    if (-x "/bin/systemctl" || -x "/usr/bin/systemctl") {
+    if (-x "$dpkg_root/bin/systemctl" || -x "$dpkg_root/usr/bin/systemctl") {
         my $systemd_root = '/';
         if ($dpkg_root ne '') {
             $systemd_root = $dpkg_root;
@@ -187,23 +187,30 @@ sub make_systemd_links {
 
 sub create_sequence {
     my $force = (@_);
-    my $insserv = "/usr/lib/insserv/insserv";
+    my $insserv = "$dpkg_root/usr/lib/insserv/insserv";
     # Fallback for older insserv package versions [2014-04-16]
-    $insserv = "/sbin/insserv" if ( -x "/sbin/insserv");
+    $insserv = "/sbin/insserv" if ( -x "$dpkg_root/sbin/insserv");
     # If insserv is not configured it is not fully installed
-    my $insserv_installed = -x $insserv && -e "/etc/insserv.conf";
+    my $insserv_installed = -x "$dpkg_root$insserv" && -e "$dpkg_root/etc/insserv.conf";
     my @opts;
     push(@opts, '-f') if $force;
     # Add force flag if initscripts is not installed
     # This enables inistcripts-less systems to not fail when a facility is missing
     unshift(@opts, '-f') unless is_initscripts_installed();
+    if ( $dpkg_root ne '' ) {
+        push( @opts,
+            '--path',        "$dpkg_root/etc/init.d",
+            '--override',    "$dpkg_root/etc/insserv/overrides/",
+            '--insserv-dir', "$dpkg_root/etc/init.d",
+            '--config',      "$dpkg_root/etc/insserv.conf" );
+    }
 
-    my $openrc_installed = -x "/sbin/openrc";
+    my $openrc_installed = -x "$dpkg_root/sbin/openrc";
 
     my $sysv_insserv ={};
     $sysv_insserv->{remove} = sub {
         my ($scriptname) = @_;
-        if ( -f "/etc/init.d/$scriptname" ) {
+        if ( -f "$dpkg_root/etc/init.d/$scriptname" ) {
             return system($insserv, @opts, "-r", $scriptname) >> 8;
         } else {
             # insserv removes all dangling symlinks, no need to tell it
@@ -214,7 +221,7 @@ sub create_sequence {
     };
     $sysv_insserv->{defaults} = sub {
         my ($scriptname) = @_;
-        if ( -f "/etc/init.d/$scriptname" ) {
+        if ( -f "$dpkg_root/etc/init.d/$scriptname" ) {
             my $rc = system($insserv, @opts, $scriptname) >> 8;
             error_code($rc, "insserv rejected the script header") if $rc;
         } else {
@@ -223,8 +230,8 @@ sub create_sequence {
     };
     $sysv_insserv->{defaults_disabled} = sub {
         my ($scriptname) = @_;
-        return if glob("/etc/rc?.d/[SK][0-9][0-9]$scriptname");
-        if ( -f "/etc/init.d/$scriptname" ) {
+        return if glob("$dpkg_root/etc/rc?.d/[SK][0-9][0-9]$scriptname");
+        if ( -f "$dpkg_root/etc/init.d/$scriptname" ) {
             my $rc = system($insserv, @opts, $scriptname) >> 8;
             error_code($rc, "insserv rejected the script header") if $rc;
         } else {
