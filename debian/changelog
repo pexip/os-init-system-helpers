@@ -1,3 +1,55 @@
+init-system-helpers (1.68) unstable; urgency=medium
+
+  * Drop no longer needed dependency on usrmerge | usr-is-merged.
+    This was meant as a temporary measure to ensure that the transition to
+    the merged-/usr file system layout is done on upgrades to bookworm.
+
+ -- Michael Biebl <biebl@debian.org>  Sun, 29 Dec 2024 14:52:41 +0100
+
+init-system-helpers (1.67) unstable; urgency=medium
+
+  [ Mark Hindley ]
+  * Don't manually set status symlinks for native openrc-run scripts. For
+    native openrc-run scripts, fiddling with the links before the script
+    is run actually prevents it from running as openrc-run detects the
+    status has been changed and considers the script as already started.
+    (Closes: #1081994)
+
+  [ Luca Boccassi ]
+  * d/control: bump Standards-Version to 4.7.0, no changes
+
+ -- Luca Boccassi <bluca@debian.org>  Tue, 17 Sep 2024 17:07:33 +0200
+
+init-system-helpers (1.66) unstable; urgency=medium
+
+  [ Samuel Thibault ]
+  * Add hurd-amd64 case.
+
+  [ Gioele Barabucci ]
+  * d/init.lintian-overrides: Silence warning about "Important" field
+    `Important: yes` instructs APT to warn the user before removing this
+    package.
+
+  [ Johannes Schauer Marin Rodrigues ]
+  * script/update-rc.d: DPKG_ROOT support for sysvinit
+
+  [ Ansgar ]
+  * Add "Protected: yes" to package "init" The "Protected" field does the
+    same as "Important" already did in apt, but is also understood by dpkg
+    (since dpkg 1.20.1).
+
+  [ Luca Boccassi ]
+  * Bump Standards-Version to 4.6.2, no changes
+  * Override Lintian warning for Protected: yes
+  * deb-systemd-invoke: support reload/reexec. This is useful for the
+    --user case, to provide a shortcut that loops over all active user
+    sessions over D-Bus.
+  * deb-systemd-invoke: support --no-dbus for reload/reexec. Provide
+    common implementation for SIGHUP/SIGRTMIN+25 to reload/reexec the
+    system or user instances.
+
+ -- Luca Boccassi <bluca@debian.org>  Sun, 26 Nov 2023 20:42:28 +0000
+
 init-system-helpers (1.65.2+pexip24u3) pexip-bookworm; urgency=medium
 
   * New versioning scheme

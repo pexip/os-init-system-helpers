@@ -8,12 +8,12 @@ XSBC-Pexip-Original-Uploaders: Michael Biebl <biebl@debian.org>,
            Felipe Sateler <fsateler@debian.org>,
            Luca Boccassi <bluca@debian.org>,
 Build-Depends: debhelper-compat (= 13),
-               fakeroot [!hurd-i386 !ia64 !kfreebsd-amd64 !kfreebsd-i386 !x32] <!nocheck>,
-               fakechroot [!hurd-i386 !ia64 !kfreebsd-amd64 !kfreebsd-i386 !x32] <!nocheck>,
+               fakeroot [!hurd-amd64 !hurd-i386 !ia64 !kfreebsd-amd64 !kfreebsd-i386 !x32] <!nocheck>,
+               fakechroot [!hurd-amd64 !hurd-i386 !ia64 !kfreebsd-amd64 !kfreebsd-i386 !x32] <!nocheck>,
                libtest-deep-perl <!nocheck>,
                perl:any,
-               python3-docutils
-Standards-Version: 4.6.1
+               python3-docutils <!nodoc>,
+Standards-Version: 4.7.0
 Rules-Requires-Root: no
 Vcs-Git: https://salsa.debian.org/debian/init-system-helpers.git
 Vcs-Browser: https://salsa.debian.org/debian/init-system-helpers
@@ -26,7 +26,6 @@ Essential: yes
 Multi-Arch: foreign
 Depends: ${misc:Depends},
          ${perl:Depends},
-         usrmerge | usr-is-merged,
 Description: helper tools for all init systems
  This package contains helper tools that are necessary for switching between
  the various init systems that Debian contains (e. g. sysvinit or
@@ -46,6 +45,7 @@ Section: metapackages
 Architecture: any
 Priority: important
 XB-Important: yes
+Protected: yes
 Multi-Arch: foreign
 Pre-Depends: systemd-sysv [linux-any] ${alt:sysvinit},
 Depends: ${misc:Depends},
