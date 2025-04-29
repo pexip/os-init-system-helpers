@@ -1,3 +1,9 @@
+init-system-helpers (1.68+pexip25u1) pexip-trixie; urgency=medium
+
+  * Initial trixie build
+
+ -- Mark Hymers <mark.hymers@pexip.com>  Tue, 29 Apr 2025 22:34:06 +0100
+
 init-system-helpers (1.68) unstable; urgency=medium
 
   * Drop no longer needed dependency on usrmerge | usr-is-merged.
