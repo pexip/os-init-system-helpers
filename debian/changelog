@@ -1,3 +1,16 @@
+init-system-helpers (1.69~deb13u1) trixie; urgency=medium
+
+  * Upload to trixie
+
+ -- Luca Boccassi <bluca@debian.org>  Wed, 20 Aug 2025 14:39:01 +0100
+
+init-system-helpers (1.69) unstable; urgency=medium
+
+  * Add postinst to hotfix an upgrade bug on certain newly live-installed
+    systems built using Trixie's live-build (Closes: #1111039)
+
+ -- Luca Boccassi <bluca@debian.org>  Fri, 15 Aug 2025 19:46:44 +0100
+
 init-system-helpers (1.68+pexip25u1) pexip-trixie; urgency=medium
 
   * Initial trixie build
