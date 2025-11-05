@@ -1,3 +1,9 @@
+init-system-helpers (1.69~deb13u1+pexip25u1) pexip-trixie; urgency=medium
+
+  * New upstream release
+
+ -- Mark Hymers <mark.hymers@pexip.com>  Wed, 05 Nov 2025 11:02:47 +0000
+
 init-system-helpers (1.69~deb13u1) trixie; urgency=medium
 
   * Upload to trixie
